@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+
+# Django
+db.sqlite3
+/media/
+
+# Virtual env
+erp-env/
+
+# VS Code
+.vscode/
+
+# OS files
+.DS_Store
