@@ -12,6 +12,13 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 
+
+LOGIN_URL = "login"
+
+
+LOGIN_REDIRECT_URL = "select_company"
+LOGOUT_REDIRECT_URL = "login"
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -25,10 +32,14 @@ SECRET_KEY = 'django-insecure-&k5(t31ik5@1e7)j!z@o()!mv036_-ab*n$s7a*w9!yz2c=kez
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
-
+ALLOWED_HOSTS = ["*"]
 
 # Application definition
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://*.ngrok-free.dev",
+    "https://*.ngrok-free.app",
+]
 
 INSTALLED_APPS = [
     'django.contrib.admin',

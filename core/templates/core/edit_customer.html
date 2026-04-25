@@ -1,0 +1,20 @@
+{% extends "core/base.html" %}
+
+{% block content %}
+
+<h2>Edit Customer</h2>
+
+<div class="card">
+    <form method="POST">
+        {% csrf_token %}
+
+        <input type="text" name="name" value="{{ customer.name }}" required>
+        <input type="text" name="phone" value="{{ customer.phone }}">
+        <input type="email" name="email" value="{{ customer.email }}">
+        <input type="text" name="gstin" value="{{ customer.gstin }}">
+
+        <button type="submit">Update Customer</button>
+    </form>
+</div>
+
+{% endblock %}

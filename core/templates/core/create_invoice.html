@@ -1,0 +1,266 @@
+{% extends "core/base.html" %}
+
+{% block content %}
+
+<h2 class="page-title">🧾 Create Invoice</h2>
+
+<form method="POST">
+{% csrf_token %}
+
+<!-- Customer -->
+<div class="card">
+    <label>Customer</label>
+    <select name="customer" class="input">
+        {% for c in customers %}
+        <option value="{{ c.id }}"
+            {% if invoice and invoice.customer.id == c.id %}selected{% endif %}>
+            {{ c.name }}
+        </option>
+        {% endfor %}
+    </select>
+</div>
+
+<!-- Items -->
+<div class="card">
+
+    <div class="table-header">
+        <h3>Items</h3>
+        <button type="button" onclick="addRow()" class="btn-secondary">+ Add Row</button>
+    </div>
+
+    <div class="card" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+    <div>
+        <label>Invoice Date</label>
+        <input type="date" name="date" class="input">
+    </div>
+    <div>
+        <label>Due Date</label>
+        <input type="date" name="due_date" class="input">
+    </div>
+</div>
+
+    <table class="erp-table">
+        <thead>
+            <tr>
+                <th>Description</th>
+                <th>Qty</th>
+                <th>Rate</th>
+                <th class="text-end">Amount</th>
+                <th></th>
+            </tr>
+        </thead>
+
+        <tbody id="item-body">
+
+        {% if items %}
+            {% for item in items %}
+            <tr>
+                <td>
+                    <input name="description[]" class="input" value="{{ item.description }}">
+                </td>
+                <td>
+                    <input name="quantity[]" type="number" class="input"
+                           value="{{ item.quantity }}" oninput="calculateTotal()">
+                </td>
+                <td>
+                    <input name="rate[]" type="number" class="input"
+                           value="{{ item.rate }}" oninput="calculateTotal()">
+                </td>
+                <td class="text-end amount">
+                    ₹ {{ item.amount }}
+                </td>
+                <td>
+                    <button type="button" onclick="removeRow(this)">❌</button>
+                </td>
+            </tr>
+            {% endfor %}
+        {% else %}
+            <tr>
+                <td><input name="description[]" class="input"></td>
+                <td><input name="quantity[]" type="number" class="input" oninput="calculateTotal()"></td>
+                <td><input name="rate[]" type="number" class="input" oninput="calculateTotal()"></td>
+                <td class="text-end amount">₹ 0.00</td>
+                <td><button type="button" onclick="removeRow(this)">❌</button></td>
+            </tr>
+        {% endif %}
+
+        </tbody>
+    </table>
+
+</div>
+
+<!-- Narration -->
+<div class="card">
+    <label>Narration</label>
+    <textarea name="narration" class="input">{% if invoice %}{{ invoice.narration }}{% endif %}</textarea>
+</div>
+
+<div class="card">
+    <label>Received Now (Optional)</label>
+    <input type="number" name="paid_amount" class="input" value="0">
+</div>
+
+<!-- Total -->
+<div class="total-box">
+    <h3>Total: ₹ <span id="grand-total">0.00</span></h3>
+</div>
+
+<!-- Buttons -->
+<div class="actions">
+    <button name="action" value="draft" class="btn-secondary">Save Draft</button>
+    <button name="action" value="post" class="btn-primary">Post Invoice</button>
+</div>
+
+</form>
+
+<!-- STYLES -->
+<style>
+
+
+.total-box {
+    background: #f8fafc;
+    padding: 15px;
+    border-radius: 10px;
+    font-size: 22px;
+    color: #111827;
+}
+
+.page-title {
+    margin-bottom: 20px;
+}
+
+.card {
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+.input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+}
+
+.table-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.erp-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.erp-table th {
+    background: #f1f5f9;
+    padding: 10px;
+}
+
+.erp-table td {
+    padding: 10px;
+    border-top: 1px solid #eee;
+}
+
+.text-end {
+    text-align: right;
+}
+
+.total-box {
+    text-align: right;
+    font-size: 18px;
+    font-weight: bold;
+    margin-top: 10px;
+}
+
+.actions {
+    margin-top: 15px;
+}
+
+.btn-primary {
+    background: #4f46e5;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-secondary {
+    background: #e5e7eb;
+    padding: 10px 15px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-secondary:hover {
+    background: #d1d5db;
+}
+
+.btn-primary:hover {
+    background: #4338ca;
+}
+
+</style>
+
+<!-- JS -->
+<script>
+
+
+function openPaymentModal(id, amount) {
+    document.getElementById("paymentModal").style.display = "block";
+    document.getElementById("invoice_id").value = id;
+    document.getElementById("outstanding").innerText = amount;
+}
+
+function closeModal() {
+    document.getElementById("paymentModal").style.display = "none";
+}
+
+function addRow() {
+    let row = `
+    <tr>
+        <td><input name="description[]" class="input"></td>
+        <td><input name="quantity[]" type="number" class="input" oninput="calculateTotal()"></td>
+        <td><input name="rate[]" type="number" class="input" oninput="calculateTotal()"></td>
+        <td class="text-end amount">₹ 0.00</td>
+        <td><button type="button" onclick="removeRow(this)">❌</button></td>
+    </tr>
+    `;
+    document.getElementById("item-body").insertAdjacentHTML("beforeend", row);
+}
+
+function removeRow(btn) {
+    btn.closest("tr").remove();
+    calculateTotal();
+}
+
+function calculateTotal() {
+    let rows = document.querySelectorAll("#item-body tr");
+    let grandTotal = 0;
+
+    rows.forEach(row => {
+        let qty = row.querySelector('input[name="quantity[]"]').value || 0;
+        let rate = row.querySelector('input[name="rate[]"]').value || 0;
+
+        let amount = qty * rate;
+        row.querySelector(".amount").innerText = "₹ " + amount.toFixed(2);
+
+        grandTotal += amount;
+    });
+
+    document.getElementById("grand-total").innerText = grandTotal.toFixed(2);
+}
+
+// Auto calculate on load (important for edit)
+window.onload = function() {
+    calculateTotal();
+};
+
+</script>
+
+{% endblock %}

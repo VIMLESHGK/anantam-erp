@@ -1,0 +1,273 @@
+{% extends "core/base.html" %}
+
+{% block content %}
+
+<h2 class="page-title">💰 Payments</h2>
+
+<!-- Top Bar -->
+<div class="top-bar">
+    <input type="text" placeholder="🔍 Search payment..." class="search-box">
+</div>
+
+<!-- Summary Cards -->
+<div class="card-container">
+
+    <div class="card small">
+        <h4>Total Payments</h4>
+        <p>{{ payments|length }}</p>
+    </div>
+
+    <div class="card small">
+        <h4>Total Received</h4>
+        <p class="text-success">₹ {{ total_received }}</p>
+    </div>
+
+    <div class="card small">
+        <h4>Posted</h4>
+        <p>₹ {{ total_posted }}</p>
+    </div>
+
+    <div class="card small">
+        <h4>Cancelled Payments</h4>
+        <p class="text-danger">{{ total_cancelled }}</p>
+    </div>
+
+</div>
+
+
+
+<div class="filters">
+
+    <a href="?status=all" 
+       class="filter-btn {% if current_filter == 'all' %}active{% endif %}">
+       All
+    </a>
+
+    <a href="?status=posted" 
+       class="filter-btn {% if current_filter == 'posted' %}active{% endif %}">
+       Posted
+    </a>
+
+    <a href="?status=cancelled" 
+       class="filter-btn {% if current_filter == 'cancelled' %}active{% endif %}">
+       Cancelled
+    </a>
+
+</div>
+
+
+<!-- Table -->
+<div class="card">
+<table class="erp-table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Date</th>
+            <th>Customer</th>
+            <th>Invoice</th>
+            <th class="text-end">Amount</th>
+            <th>Status</th>
+            <th>Mode</th>
+            <th class="text-end">Actions</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        {% for pay in payments %}
+        <tr>
+
+            <td><strong>PAY-{{ pay.id }}</strong></td>
+
+            <td>{{ pay.date }}</td>
+
+            <td>{{ pay.customer.name }}</td>
+
+            <td>
+                {% if pay.invoice %}
+                    <span class="link">{{ pay.invoice.invoice_number }}</span>
+                {% else %}
+                    <span class="badge advance">Advance</span>
+                {% endif %}
+            </td>
+
+            <td class="text-end">₹ {{ pay.amount }}</td>
+
+            <td>
+                <span class="badge {{ pay.status }}">
+                    {{ pay.status|title }}
+                </span>
+            </td>
+
+            <td>
+                <span class="badge mode-{{ pay.payment_mode }}">
+                    {% if pay.payment_mode == "cash" %}💵 Cash{% endif %}
+                    {% if pay.payment_mode == "upi" %}📱 UPI{% endif %}
+                    {% if pay.payment_mode == "bank" %}🏦 Bank{% endif %}
+                </span>
+            </td>
+
+            <td class="text-end actions">
+
+                {% if pay.status == "draft" %}
+                    <a href="#" class="icon-btn">✏️</a>
+                {% endif %}
+
+                {% if pay.status != "cancelled" %}
+                    <a href="{% url 'cancel_payment' pay.id %}" 
+                       class="icon-btn danger"
+                       onclick="return confirm('Cancel this payment?')">
+                       ❌
+                    </a>
+                {% endif %}
+
+            </td>
+
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="7" class="empty">
+                🎉 No payments found
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+
+<!-- STYLES -->
+<style>
+
+.mode-cash {
+    background: #e0f2fe;
+    color: #0369a1;
+}
+
+.mode-upi {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.mode-bank {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.filters {
+    margin: 10px 0;
+}
+
+.filter-btn {
+    margin-right: 10px;
+    text-decoration: none;
+    color: #4f46e5;
+    font-weight: 500;
+}
+
+.filter-btn.active {
+    border-bottom: 2px solid #4f46e5;
+}
+
+
+.page-title {
+    margin-bottom: 20px;
+}
+
+/* Top Bar */
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+}
+
+.search-box {
+    padding: 8px 12px;
+    width: 250px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+}
+
+/* Cards */
+.card-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px,1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.card {
+    background: white;
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+.card.small {
+    padding: 15px;
+}
+
+.text-success {
+    color: green;
+}
+
+.text-danger {
+    color: red;
+}
+
+/* Table */
+.erp-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.erp-table th {
+    background: #f1f5f9;
+    padding: 12px;
+    text-align: left;
+}
+
+.erp-table td {
+    padding: 12px;
+    border-top: 1px solid #eee;
+}
+
+.erp-table tr:hover {
+    background: #f9fafb;
+}
+
+/* Alignment */
+.text-end {
+    text-align: right;
+}
+
+/* Status badges */
+.badge {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+}
+
+.badge.draft { background: #fde68a; }
+.badge.posted { background: #bfdbfe; }
+.badge.cancelled { background: #fca5a5; }
+.badge.advance { background: #ddd; }
+
+/* Actions */
+.icon-btn {
+    text-decoration: none;
+    margin-left: 8px;
+}
+
+.icon-btn.danger {
+    color: red;
+}
+
+/* Empty */
+.empty {
+    text-align: center;
+    padding: 30px;
+    opacity: 0.6;
+}
+
+</style>
+
+{% endblock %}

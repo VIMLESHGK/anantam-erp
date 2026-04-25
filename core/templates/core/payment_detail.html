@@ -1,0 +1,21 @@
+{% extends "core/base.html" %}
+
+{% block content %}
+
+<h2>💰 Payment Details</h2>
+
+<div class="card">
+    <p><strong>Receipt No:</strong> {{ payment.receipt_no }}</p>
+    <p><strong>Date:</strong> {{ payment.date }}</p>
+    <p><strong>Customer:</strong> {{ payment.customer.name }}</p>
+    <p><strong>Amount:</strong> ₹ {{ payment.amount }}</p>
+    <p><strong>Status:</strong> {{ payment.status }}</p>
+
+    {% if payment.invoice %}
+        <p><strong>Invoice:</strong> {{ payment.invoice.invoice_number }}</p>
+    {% endif %}
+</div>
+
+<a href="javascript:history.back()">← Back</a>
+
+{% endblock %}

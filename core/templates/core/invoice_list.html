@@ -1,0 +1,454 @@
+{% extends "core/base.html" %}
+
+{% block content %}
+
+<h2 class="page-title">📄 Invoices</h2>
+
+<!-- Top Bar -->
+<div class="top-bar">
+    <input type="text" placeholder="🔍 Search invoice..." class="search-box">
+
+    <a href="{% url 'create_invoice' %}" class="btn-primary">+ Create Invoice</a>
+</div>
+
+
+<!-- Table Card -->
+<div class="card">
+
+    <div class="card-container">
+
+    <div class="card small">
+        <h4>Total Invoices</h4>
+        <p>{{ invoices|length }}</p>
+    </div>
+
+    <div class="card small">
+        <h4>Total Amount</h4>
+        <p>₹ {{ total_amount }}</p>
+    </div>
+
+    <div class="card small">
+        <h4>Outstanding</h4>
+        <p class="text-danger">₹ {{ total_outstanding }}</p>
+    </div>
+
+    <div class="card small">
+        <h4>Paid</h4>
+        <p class="text-success">₹ {{ total_paid }}</p>
+    </div>
+
+</div>
+
+<div class="filters">
+
+    <a href="?status=all" 
+       class="filter-btn {% if current_filter == 'all' %}active{% endif %}">
+       All
+    </a>
+
+    <a href="?status=paid" 
+       class="filter-btn {% if current_filter == 'paid' %}active{% endif %}">
+       Paid
+    </a>
+
+    <a href="?status=pending" 
+       class="filter-btn {% if current_filter == 'pending' %}active{% endif %}">
+       Pending
+    </a>
+
+    <a href="?status=cancelled" 
+       class="filter-btn {% if current_filter == 'cancelled' %}active{% endif %}">
+       Cancelled
+    </a>
+
+</div>
+    <table class="erp-table">
+        <thead>
+            <tr>
+                <th>Invoice</th>
+                <th>Customer</th>
+                <th>Date</th>
+                <th class="text-end">Total</th>
+                <th class="text-end">Outstanding</th>
+                <th>Status</th>
+                <th>Mode</th>
+                <th class="text-end">Actions</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for inv in invoices %}
+            <tr onclick="window.location='{% url 'invoice_detail' inv.id %}'" style="cursor:pointer;">
+
+                <td>
+                    <strong>{{ inv.invoice_number }}</strong>
+                </td>
+
+                <td>{{ inv.customer.name }}</td>
+
+                <td>{{ inv.date }}</td>
+
+                <td class="text-end">₹ {{ inv.total_amount }}</td>
+
+                <td class="text-end">
+                    {% if inv.outstanding_amount > 0 %}
+                        {% if inv.date|timesince > "30 days" %}
+                            <span class="amount danger blink">₹ {{ inv.outstanding_amount }}</span>
+                        {% else %}
+                            <span class="amount warning">₹ {{ inv.outstanding_amount }}</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="amount success">₹ 0.00</span>
+                    {% endif %}
+                </td>
+
+                <td>
+                    <span class="badge {{ inv.status }}">
+                        {{ inv.status|title }}
+                    </span>
+                </td>
+
+
+                <td>
+                    <span class="badge mode-{{ inv.last_payment_mode }}">
+                        {% if inv.last_payment_mode == "cash" %}💵 Cash{% endif %}
+                        {% if inv.last_payment_mode == "upi" %}📱 UPI{% endif %}
+                        {% if inv.last_payment_mode == "bank" %}🏦 Bank{% endif %}
+                    </span>
+                </td>
+
+                <td class="text-end actions">
+
+                    {% if inv.status == "posted" or inv.status == "partial"  %}
+                   <button 
+                        type="button"
+                        class="icon-btn pay-icon"
+                        onclick="event.stopPropagation(); openPaymentModal({{ inv.id }}, '{{ inv.outstanding_amount }}')"
+                        title="Receive Payment">
+                        💰
+                    </button>
+                    {% endif %}
+                    <a href="{% url 'invoice_detail' inv.id %}" class="icon-btn">👁</a>
+
+                    <a href="{% url 'invoice_pdf' inv.id %}" target="_blank" class="icon-btn">🖨</a>
+
+                    {% if inv.status == "draft" %}
+                        <a href="{% url 'edit_invoice' inv.id %}" class="icon-btn">✏️</a>
+                    {% endif %}
+
+                    {% if inv.status != "cancelled" and inv.status != "paid" %}
+                        <a href="{% url 'cancel_invoice' inv.id %}" 
+                           class="icon-btn danger"
+                           onclick="return confirm('Cancel this invoice?')">
+                           ❌
+                        </a>
+                    {% endif %}
+
+                </td>
+
+            </tr>
+
+            {% empty %}
+            <tr>
+                <td colspan="7" class="empty">
+                    🎉 No invoices found
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+</div>
+
+<div id="paymentModal" class="modal" style="display:none;">
+    <div class="modal-box">
+        <h3>Receive Payment</h3>
+
+        <form id="paymentForm">
+            {% csrf_token %}
+            <input type="hidden" name="invoice_id" id="invoice_id">
+
+            <p>Outstanding: ₹ <span id="outstanding"></span></p>
+
+       <div style="display:flex; gap:8px; margin-top:8px;">
+            <input type="number" name="amount" id="amountInput" class="input" required>
+
+
+            <!-- 🔥 NEW FIELD -->
+     <select name="payment_mode" id="payment-mode" class="input">
+        <option value="cash">💵 Cash</option>
+        <option value="upi">📱 UPI</option>
+        <option value="bank">🏦 Bank</option>
+    </select>
+
+
+        
+            <button type="button" onclick="fillFullAmount()" class="btn-secondary">Full</button>
+        </div>
+
+        <div style="margin-top:12px; display:flex; justify-content:flex-end; gap:10px;">
+            <button type="button" onclick="closeModal()" class="btn-secondary">Cancel</button>
+            <button type="submit" class="btn-primary">Receive</button>
+        </div>
+        </form>
+    </div>
+</div>
+
+<script>
+
+
+function openPaymentModal(invoiceId, outstanding) {
+    document.getElementById("invoice_id").value = invoiceId;
+    document.getElementById("outstanding").innerText = outstanding;
+
+    // ✅ Auto-fill
+    document.getElementById("amountInput").value = outstanding;
+
+    document.getElementById("paymentModal").style.display = "flex";
+}
+
+function fillFullAmount() {
+    const outstanding = document.getElementById("outstanding").innerText;
+    document.getElementById("amountInput").value = outstanding;
+}
+
+
+function closeModal() {
+    document.getElementById("paymentModal").style.display = "none";
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+
+    document.getElementById("paymentForm").addEventListener("submit", function(e) {
+        e.preventDefault();
+
+        const invoiceId = document.getElementById("invoice_id").value;
+        const amount = document.querySelector("input[name='amount']").value;
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        fetch("{% url 'receive_payment' %}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "X-CSRFToken": csrfToken
+            },
+            body: new URLSearchParams({
+                invoice_id: invoiceId,
+                amount: amount,
+                payment_mode: document.getElementById("payment-mode").value
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                closeModal();
+                location.reload();
+            } else {
+                alert(data.error || "Something went wrong");
+            }
+        });
+    });
+
+});
+
+
+</script>
+
+<!-- STYLES -->
+<style>
+
+
+.mode-cash { background:#e0f2fe; color:#0369a1; }
+.mode-upi { background:#dcfce7; color:#166534; }
+.mode-bank { background:#fef3c7; color:#92400e; }
+
+
+.modal-box {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    width: 320px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.pay-icon {
+    background: #10b981;
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-right: 6px;
+}
+
+.pay-icon:hover {
+    background: #059669;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-box {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    width: 300px;
+}
+
+
+.filters {
+    margin: 10px 0;
+}
+
+.filter-btn {
+    margin-right: 10px;
+    text-decoration: none;
+    color: #4f46e5;
+    font-weight: 500;
+}
+
+.filter-btn.active {
+    border-bottom: 2px solid #4f46e5;
+}
+
+
+.card-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px,1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.card.small {
+    padding: 15px;
+}
+
+.amount.warning {
+    color: #f59e0b;
+    font-weight: 600;
+}
+
+.blink {
+    animation: blinkAnim 1s infinite;
+}
+
+@keyframes blinkAnim {
+    0% { opacity: 1; }
+    50% { opacity: 0.4; }
+    100% { opacity: 1; }
+}
+
+.page-title {
+    margin-bottom: 20px;
+}
+
+/* Top Bar */
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+}
+
+.search-box {
+    padding: 8px 12px;
+    width: 250px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+}
+
+/* Button */
+.btn-primary {
+    background: #4f46e5;
+    color: white;
+    padding: 8px 14px;
+    border-radius: 6px;
+    text-decoration: none;
+}
+
+.btn-primary:hover {
+    background: #4338ca;
+}
+
+/* Card */
+.card {
+    background: white;
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+/* Table */
+.erp-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.erp-table th {
+    background: #f1f5f9;
+    padding: 12px;
+    text-align: left;
+}
+
+.erp-table td {
+    padding: 12px;
+    border-top: 1px solid #eee;
+}
+
+.erp-table tr:hover {
+    background: #f9fafb;
+}
+
+/* Alignment */
+.text-end {
+    text-align: right;
+}
+
+/* Status Badge */
+.badge {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+}
+
+/* Status Colors */
+.badge.draft { background: #fde68a; }
+.badge.posted { background: #bfdbfe; }
+.badge.partial { background: #fdba74; }
+.badge.paid { background: #86efac; }
+.badge.cancelled { background: #fca5a5; }
+
+/* Amount colors */
+.amount.success {
+    color: green;
+}
+
+.amount.danger {
+    color: red;
+}
+
+/* Icons */
+.icon-btn {
+    text-decoration: none;
+    margin-left: 8px;
+}
+
+.icon-btn.danger {
+    color: red;
+}
+
+/* Empty */
+.empty {
+    text-align: center;
+    padding: 30px;
+    opacity: 0.6;
+}
+
+</style>
+
+{% endblock %}

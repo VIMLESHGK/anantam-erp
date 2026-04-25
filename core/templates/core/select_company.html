@@ -1,0 +1,18 @@
+{% extends "core/base.html" %}
+
+{% block content %}
+
+<h2>Select Company</h2>
+
+<div style="display:flex;gap:20px;flex-wrap:wrap;">
+
+{% for uc in companies %}
+    <div style="padding:20px;background:white;border-radius:10px;">
+        <h3>{{ uc.company.name }}</h3>
+        <a href="{% url 'set_company' uc.company.id %}">Enter</a>
+    </div>
+{% endfor %}
+
+</div>
+
+{% endblock %}

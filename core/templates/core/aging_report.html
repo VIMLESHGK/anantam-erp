@@ -1,0 +1,217 @@
+{% extends "core/base.html" %}
+
+{% block content %}
+
+<h2>📊 Customer Aging Report</h2>
+
+<!-- Summary Cards -->
+<div class="card-container">
+
+    <a href="{% url 'aging_detail' '0_30' %}" class="card-link">
+        <div class="card">
+            <h4>0–30 Days</h4>
+            <p>₹ {{ summary.bucket_0_30 }}</p>
+        </div>
+    </a>
+
+    <a href="{% url 'aging_detail' '31_60' %}" class="card-link">
+        <div class="card">
+            <h4>31–60 Days</h4>
+            <p>₹ {{ summary.bucket_31_60 }}</p>
+        </div>
+    </a>
+
+    <a href="{% url 'aging_detail' '61_90' %}" class="card-link">
+        <div class="card">
+            <h4>61–90 Days</h4>
+            <p>₹ {{ summary.bucket_61_90 }}</p>
+        </div>
+    </a>
+
+    <a href="{% url 'aging_detail' '90_plus' %}" class="card-link">
+        <div class="card">
+            <h4>90+ Days</h4>
+            <p class="text-danger">₹ {{ summary.bucket_90_plus }}</p>
+        </div>
+    </a>
+
+</div>
+
+<!-- Customer Summary -->
+<div class="card" style="margin-top:20px;">
+    <h3 style="margin-bottom:15px;">👥 Customer Aging Summary</h3>
+
+    <table class="erp-table aging-table">
+        <thead>
+            <tr>
+                <th>Customer</th>
+                <th class="text-end">0–30</th>
+                <th class="text-end">31–60</th>
+                <th class="text-end">61–90</th>
+                <th class="text-end">90+</th>
+                <th class="text-end">Total</th>
+            </tr>
+        </thead>
+
+        <tbody>
+
+            {% if not customer_data %}
+            <tr>
+                <td colspan="6" style="text-align:center; padding:40px;">
+                    <div style="opacity:0.7;">
+                        <h3>🎉 All Clear!</h3>
+                        <p>No outstanding receivables</p>
+                    </div>
+                </td>
+            </tr>
+            {% endif %}
+
+            {% for row in customer_data %}
+            <tr onclick="toggleDetails({{ forloop.counter }})" style="cursor:pointer;">
+                <td>
+                    <a href="{% url 'customer_ledger' row.customer.id %}" class="link">
+                        {{ row.customer.name }}
+                    </a>
+                </td>
+                <td class="text-end">₹ {{ row.data.bucket_0_30 }}</td>
+                <td class="text-end">₹ {{ row.data.bucket_31_60 }}</td>
+                <td class="text-end">₹ {{ row.data.bucket_61_90 }}</td>
+                <td class="text-end text-danger">₹ {{ row.data.bucket_90_plus }}</td>
+                <td class="text-end"><strong>₹ {{ row.data.total }}</strong></td>
+            </tr>
+
+            <!-- Expand Invoice Details -->
+            <tr id="detail-{{ forloop.counter }}" style="display:none;">
+                <td colspan="6">
+                    <table class="erp-table aging-table" style="background:#f8fafc;">
+                        <thead>
+                            <tr>
+                                <th>Invoice</th>
+                                <th>Date</th>
+                                <th>Days</th>
+                                <th class="text-end">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for inv in row.invoices %}
+                            <tr>
+                                <td>{{ inv.invoice.invoice_number }}</td>
+                                <td>{{ inv.invoice.date }}</td>
+                                <td>{{ inv.days }}</td>
+                                <td class="text-end">₹ {{ inv.amount }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" style="text-align:center; opacity:0.6;">
+                                    No invoices
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </td>
+            </tr>
+
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<style>
+
+.link {
+    color: #4f46e5;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.link:hover {
+    text-decoration: underline;
+}
+
+.erp-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.erp-table th {
+    background: #f1f5f9;
+    padding: 14px;
+}
+
+.erp-table td {
+    padding: 14px;
+}
+
+.text-end {
+    text-align: right;
+}
+
+.text-danger {
+    color: #ef4444;
+}
+
+.card-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+}
+
+.aging-table th {
+    text-align: left;
+    padding: 12px;
+}
+
+.aging-table td {
+    padding: 12px;
+    border-top: 1px solid #eee;
+}
+
+.aging-table td:not(:first-child),
+.aging-table th:not(:first-child) {
+    text-align: right;
+}
+
+.aging-table tr:hover {
+    background-color: #f8fafc;
+}
+
+.aging-table thead {
+    background-color: #f1f5f9;
+}
+
+.aging-table th {
+    font-weight: 600;
+    color: #334155;
+}
+
+.card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    margin-bottom: 20px;
+}
+
+
+.card-link {
+    text-decoration: none;
+    color: inherit;
+}
+
+.card-link:hover .card {
+    transform: translateY(-4px);
+    transition: 0.2s;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+}
+
+</style>
+
+<script>
+function toggleDetails(id) {
+    let row = document.getElementById("detail-" + id);
+    row.style.display = row.style.display === "none" ? "table-row" : "none";
+}
+</script>
+
+{% endblock %}

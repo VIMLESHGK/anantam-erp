@@ -1,0 +1,60 @@
+{% extends "core/base.html" %}
+{% block content %}
+
+<h3>📒 Ledger</h3>
+
+<table class="table table-bordered table-striped">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Particulars</th>
+            <th class="text-end">Debit</th>
+            <th class="text-end">Credit</th>
+            <th class="text-end">Balance</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in ledger %}
+        <tr>
+            <td>{{ row.date }}</td>
+            <td>{{ row.reference }}</td>
+            <td class="text-end">
+                {% if row.debit %}₹ {{ row.debit }}{% endif %}
+            </td>
+            <td class="text-end">
+                {% if row.credit %}₹ {{ row.credit }}{% endif %}
+            </td>
+            <td class="text-end {% if row.balance < 0 %}balance-negative{% else %}balance-positive{% endif %}">
+    ₹ {{ row.balance }}
+</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<style>
+.table {
+    background: white;
+    border-radius: 8px;
+}
+
+th {
+    background-color: #f5f5f5;
+}
+
+.text-end {
+    text-align: right;
+}
+
+.balance-positive {
+    color: green;
+    font-weight: bold;
+}
+
+.balance-negative {
+    color: red;
+    font-weight: bold;
+}
+</style>
+
+{% endblock %}

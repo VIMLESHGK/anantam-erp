@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial; margin: 30px; }
+        .header { text-align: center; font-size: 22px; font-weight: bold; }
+        .section { margin-top: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        table, th, td { border: 1px solid black; }
+        th, td { padding: 8px; }
+        .right { text-align: right; }
+    </style>
+</head>
+<body>
+
+{% if invoice.status|lower == "cancelled" %}
+<div style="
+    position: fixed;
+    top: 40%;
+    left: 20%;
+    font-size: 80px;
+    color: rgba(255,0,0,0.2);
+    transform: rotate(-30deg);
+">
+    CANCELLED
+</div>
+{% endif %}
+
+<div class="header">TAX INVOICE</div>
+
+<div class="section">
+    <b>{{ invoice.company.name }}</b><br>
+    GSTIN: {{ invoice.company.gstin }}
+</div>
+
+<div class="section">
+    <b>Customer:</b> {{ invoice.customer.name }}<br>
+    <b>Date:</b> {{ invoice.date }}<br>
+    <b>Invoice No:</b> {{ invoice.invoice_number }}
+</div>
+
+<table>
+    <tr>
+        <th>Description</th>
+        <th>Qty</th>
+        <th>Rate</th>
+        <th>Amount</th>
+    </tr>
+
+    {% for item in invoice.items.all %}
+    <tr>
+        <td>{{ item.description }}</td>
+        <td>{{ item.quantity }}</td>
+        <td>{{ item.rate }}</td>
+        <td>{{ item.amount }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<div class="section right">
+    <b>Total: ₹ {{ invoice.total_amount }}</b>
+</div>
+
+</body>
+</html>

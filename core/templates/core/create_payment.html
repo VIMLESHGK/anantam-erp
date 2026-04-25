@@ -1,0 +1,242 @@
+{% extends "core/base.html" %}
+
+{% block content %}
+
+<h2 style="margin-bottom:20px;">💰 Create Payment</h2>
+
+<form method="post" id="paymentForm">
+    {% csrf_token %}
+
+    <!-- Customer -->
+    <label><strong>Customer:</strong></label>
+    <select name="customer" id="customer" required>
+        <option value="">Select Customer</option>
+        {% for c in customers %}
+            <option value="{{ c.id }}"
+                {% if selected_customer == c.id|stringformat:"s" %}selected{% endif %}
+            >
+                {{ c.name }}
+            </option>
+        {% endfor %}
+    </select>
+
+    <br><br>
+
+    <!-- Amount -->
+    <label><strong>Total Payment Amount:</strong></label>
+    <input type="number" name="amount" id="total_amount" step="0.01" required>
+
+    <br><br>
+
+    <!-- Remaining -->
+    <div style="margin-bottom:10px;">
+        <strong>Remaining: ₹ <span id="remaining">0.00</span></strong>
+    </div>
+
+    <!-- Allocation Table -->
+    <h3>📄 Allocate to Invoices</h3>
+
+    <table class="erp-table" id="invoice_table">
+        <thead>
+            <tr>
+                <th>Invoice</th>
+                <th>Outstanding</th>
+                <th>Allocate</th>
+                <th>Full</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Filled by JS -->
+        </tbody>
+    </table>
+
+    <br>
+
+    <button type="submit">Submit Payment</button>
+
+</form>
+
+<!-- JS -->
+<script>
+const customerSelect = document.getElementById("customer");
+const totalInput = document.getElementById("total_amount");
+const remainingSpan = document.getElementById("remaining");
+const tableBody = document.querySelector("#invoice_table tbody");
+
+// Load invoices
+customerSelect.addEventListener("change", function () {
+    const customerId = this.value;
+
+    fetch(`/get-invoices/?customer_id=${customerId}`)
+        .then(res => res.json())
+        .then(data => {
+            tableBody.innerHTML = "";
+
+            data.forEach(inv => {
+                const row = `
+                    <tr>
+                        <td>${inv.number}</td>
+                        <td>₹ ${inv.outstanding}</td>
+                        <td>
+                            <input type="hidden" name="invoice_id" value="${inv.id}">
+                            <input type="number" step="0.01" class="alloc" name="alloc_amount" value="0">
+                        </td>
+                        <td>
+                            <button type="button" onclick="allocateFull(this, ${inv.outstanding})">
+                                Full
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                tableBody.innerHTML += row;
+            });
+
+            bindInputs();
+        });
+});
+
+// Auto calculation
+function bindInputs() {
+    document.querySelectorAll(".alloc").forEach(input => {
+        input.addEventListener("input", calculateRemaining);
+    });
+}
+
+// Calculate remaining
+function calculateRemaining() {
+    let total = parseFloat(totalInput.value || 0);
+    let allocated = 0;
+
+    document.querySelectorAll(".alloc").forEach(input => {
+        allocated += parseFloat(input.value || 0);
+    });
+
+    let remaining = total - allocated;
+    remainingSpan.innerText = remaining.toFixed(2);
+
+    if (remaining < 0) {
+        remainingSpan.style.color = "red";
+    } else {
+        remainingSpan.style.color = "green";
+    }
+}
+
+// Allocate full
+function allocateFull(btn, amount) {
+    const row = btn.closest("tr");
+    const input = row.querySelector(".alloc");
+
+    input.value = amount;
+    calculateRemaining();
+}
+
+// Watch total change
+totalInput.addEventListener("input", calculateRemaining);
+
+document.getElementById("paymentForm").addEventListener("submit", function(e) {
+    let remaining = parseFloat(remainingSpan.innerText);
+
+   let allocated = 0;
+
+    document.querySelectorAll(".alloc").forEach(input => {
+        allocated += parseFloat(input.value || 0);
+    });
+
+    // ❗ Only validate if allocation exists
+    if (allocated > 0 && remaining !== 0) {
+        e.preventDefault();
+        alert("Allocation must match total amount!");
+    }
+});
+
+// Auto distribute payment
+function autoAllocate() {
+    let total = parseFloat(totalInput.value || 0);
+    let remaining = total;
+
+    document.querySelectorAll("#invoice_table tbody tr").forEach(row => {
+        let outstanding = parseFloat(row.children[1].innerText.replace("₹", "").trim());
+        let input = row.querySelector(".alloc");
+
+        if (remaining > 0) {
+            if (remaining >= outstanding) {
+                input.value = outstanding;
+                remaining -= outstanding;
+            } else {
+                input.value = remaining;
+                remaining = 0;
+            }
+        } else {
+            input.value = 0;
+        }
+    });
+
+    updateRemaining();
+}
+
+// Update remaining display
+function updateRemaining() {
+    let total = parseFloat(totalInput.value || 0);
+    let allocated = 0;
+
+    document.querySelectorAll(".alloc").forEach(input => {
+        allocated += parseFloat(input.value || 0);
+    });
+
+    let remaining = total - allocated;
+
+    remainingSpan.innerText = remaining.toFixed(2);
+
+    if (remaining < 0) {
+        remainingSpan.style.color = "red";
+    } else {
+        remainingSpan.style.color = "green";
+    }
+}
+
+// Bind manual input
+function bindInputs() {
+    document.querySelectorAll(".alloc").forEach(input => {
+        input.addEventListener("input", updateRemaining);
+    });
+}
+
+// On amount change → auto allocate
+totalInput.addEventListener("input", autoAllocate);
+</script>
+
+<!-- CSS -->
+<style>
+.erp-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.erp-table th {
+    background: #f1f5f9;
+    padding: 10px;
+    text-align: left;
+}
+
+.erp-table td {
+    padding: 10px;
+    border-top: 1px solid #eee;
+}
+
+input, select {
+    padding: 8px;
+    width: 250px;
+}
+
+button {
+    padding: 6px 12px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #ddd;
+}
+</style>
+
+{% endblock %}

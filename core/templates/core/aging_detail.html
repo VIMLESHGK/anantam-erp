@@ -1,0 +1,134 @@
+{% extends "core/base.html" %}
+
+{% block content %}
+
+<div style="max-width:1200px; margin:auto;">
+
+    <!-- Header -->
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <h2>📄 Aging Details ({{ bucket|upper }})</h2>
+
+        <a href="{% url 'aging_report' %}" class="btn-back">← Back to Aging</a>
+    </div>
+
+    <!-- Card -->
+    <div class="card">
+
+        <table class="erp-table modern-table">
+            <thead>
+                <tr>
+                    <th>Invoice</th>
+                    <th>Customer</th>
+                    <th>Date</th>
+                    <th>Days</th>
+                    <th class="text-end">Amount</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for row in invoices %}
+                <tr>
+                    <td>
+                            <a href="{% url 'invoice_detail' row.invoice.id %}" class="link">
+                                <strong>{{ row.invoice.invoice_number }}</strong>
+                            </a>
+                    </td>
+                    <td>{{ row.customer.name }}</td>
+                    <td>{{ row.invoice.date }}</td>
+                    <td>
+                        <span class="{% if row.days > 90 %}badge-danger{% else %}badge{% endif %}">
+                            {{ row.days }} days
+                        </span>
+                    </td>
+                    <td class="text-end">
+                        <strong>₹ {{ row.amount }}</strong>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" style="text-align:center; padding:40px;">
+                        <div style="opacity:0.7;">
+                            <h3>🎉 No Data</h3>
+                            <p>No invoices in this bucket</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+    </div>
+
+</div>
+
+<style>
+
+/* Table Upgrade */
+.modern-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.modern-table th {
+    text-align: left;
+    padding: 14px;
+    background: #f1f5f9;
+    font-weight: 600;
+    color: #334155;
+}
+
+.modern-table td {
+    padding: 14px;
+    border-top: 1px solid #eee;
+}
+
+.modern-table tr:hover {
+    background: #f8fafc;
+}
+
+/* Right align */
+.text-end {
+    text-align: right;
+}
+
+/* Card */
+.card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+/* Button */
+.btn-back {
+    text-decoration: none;
+    background: #4f46e5;
+    color: white;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.btn-back:hover {
+    background: #4338ca;
+}
+
+/* Badge */
+.badge {
+    background: #e2e8f0;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+}
+
+.badge-danger {
+    background: #fee2e2;
+    color: #dc2626;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+}
+
+</style>
+
+{% endblock %}
