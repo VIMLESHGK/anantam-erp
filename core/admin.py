@@ -3,6 +3,8 @@ from django import forms
 from django.utils.html import format_html
 from django.urls import path
 from django.shortcuts import redirect
+from .utils import create_default_accounts
+
 
 from .models import (
     Company, Payment, UserCompany, Account,
@@ -14,9 +16,20 @@ from .models import (
 # -------------------- COMPANY --------------------
 @admin.register(Company)
 class CompanyAdmin(admin.ModelAdmin):
-    list_display = ['name', 'gstin']
+    list_display = ("name", "gstin")
     search_fields = ("name", "gstin")
 
+    def save_model(self, request, obj, form, change):
+        is_new = obj.pk is None
+
+        super().save_model(request, obj, form, change)
+
+        if is_new:
+            create_default_accounts(obj)
+            messages.success(
+                request,
+                "✅ Company created and default Chart of Accounts initialized."
+            )
 
 # -------------------- USER COMPANY --------------------
 @admin.register(UserCompany)

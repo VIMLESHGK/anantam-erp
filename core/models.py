@@ -46,16 +46,41 @@ class Account(BaseModel):
     ACCOUNT_TYPES = (
         ("asset", "Asset"),
         ("liability", "Liability"),
+        ("equity", "Equity"),
         ("income", "Income"),
         ("expense", "Expense"),
     )
 
     SUB_TYPES = (
+        # Assets
         ("cash", "Cash"),
         ("bank", "Bank"),
-        ("receivable", "Receivable"),
-        ("payable", "Payable"),
+        ("receivable", "Accounts Receivable"),
+        ("inventory", "Inventory"),
+        ("fixed_asset", "Fixed Asset"),
+
+        # Liabilities
+        ("payable", "Accounts Payable"),
+        ("current_liability", "Current Liability"),
+
+        # Equity
+        ("capital", "Capital"),
+        ("retained_earnings", "Retained Earnings"),
+
+        # Income
         ("sales", "Sales"),
+        ("service_income", "Service Income"),
+        ("other_income", "Other Income"),
+
+        # Expenses
+        ("purchase", "Purchase"),
+        ("office_expense", "Office Expense"),
+        ("salary", "Salary"),
+        ("electricity", "Electricity"),
+        ("internet", "Internet"),
+        ("rent", "Rent"),
+        ("depreciation", "Depreciation"),
+        ("misc", "Miscellaneous"),
     )
 
     name = models.CharField(max_length=255)
